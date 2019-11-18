@@ -63,24 +63,48 @@ contract ToDoList is Context, AdminRole  {
 		emit TaskDeleted(taskId);
 	}
 
+
 	/**
 	 * @notice Returns array of ids of all not-deleted tasks
 	 */
 	function listAllTasks() view public returns(uint256[] memory) {
+		return filterTasks(true, true, address(0));
+	}
+	/**
+	 * @notice Returns array of ids of all pending tasks for an address
+	 * @param assigned Address to filter tasks
+	 */
+	function listPendingTasks(address assigned) view public returns(uint256[] memory) {
+		return filterTasks(false, false, assigned);
+	}
+
+
+	/**
+	 * @notice Filters tasks list 
+	 * @param includeArchive Include archive tasks
+	 * @param includeDone Include done tasks
+	 * @param assigned If not zero, only include tasks assigned to this address
+	 */
+	function filterTasks(bool includeArchive, bool includeDone, address assigned) view internal returns(uint256[] memory){
 		uint256[] memory taskIds = new uint256[](tasks.length);
 		uint256 count = 0;
 		for(uint256 i=0; i < tasks.length; i++){
 			Task storage t = tasks[i];
-			if(bytes(t.title).length > 0){
-				taskIds[count] = i;
-				count++;
-			}
+			if(bytes(t.title).length == 0) continue;						//Deleted task
+			if(!includeArchive && t.archive) continue;						//Archive task
+			if(!includeDone && t.done) continue;							//Done task
+			if(assigned != address(0) && assigned != t.assigned) continue;	//Assigned to another address
+			//Add task to result
+			taskIds[count] = i;
+			count++;
 		}
+		//Copy array to an array with correct length
 		uint256[] memory result = new uint256[](count);
 		for(uint256 i=0; i< count; i++){
 			result[i] = taskIds[i];
 		}
 		return result;
 	}
+
 
 }
